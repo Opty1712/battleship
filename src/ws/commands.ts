@@ -1,10 +1,14 @@
 import {
   addUser,
+  addUserToGame,
   addUserToRoom,
+  checkIsStartingGame,
+  createGame,
   createRoom,
+  getUsersFromRoom,
   getWaitingRooms,
 } from "./gameActions";
-import { IncomingMessage, OutgoingQueue } from "./types";
+import { IncomingMessage, OutgoingQueue, OutgoingQueueMessage } from "./types";
 import { parseMessage } from "./utils";
 
 const outgoingCommands = {
@@ -24,8 +28,7 @@ const command = (wsId: number, message: IncomingMessage) => {
   switch (message.type) {
     case "reg": {
       const player = addUser(wsId, message.data.name);
-
-      queue.push({
+      const regMessage: OutgoingQueueMessage = {
         message: {
           type: "reg",
           data: {
@@ -36,15 +39,17 @@ const command = (wsId: number, message: IncomingMessage) => {
           },
         },
         sendToAll: false,
-      });
+      };
 
-      queue.push({
+      const updatingRoomMessage: OutgoingQueueMessage = {
         message: {
           type: "update_room",
           data: getWaitingRooms(),
         },
         sendToAll: false,
-      });
+      };
+
+      queue.push(regMessage, updatingRoomMessage);
 
       return queue;
     }
@@ -52,13 +57,15 @@ const command = (wsId: number, message: IncomingMessage) => {
     case "create_room": {
       const roomId = createRoom();
 
-      queue.push({
+      const updatingRoomMessage: OutgoingQueueMessage = {
         message: {
           type: "update_room",
           data: [{ roomId, roomUsers: [] }],
         },
-        sendToAll: false,
-      });
+        sendToAll: true,
+      };
+
+      queue.push(updatingRoomMessage);
 
       return queue;
     }
@@ -66,13 +73,55 @@ const command = (wsId: number, message: IncomingMessage) => {
     case "add_user_to_room": {
       addUserToRoom(wsId, message.data.indexRoom);
 
-      queue.push({
+      const updatingRoomMessage: OutgoingQueueMessage = {
         message: {
           type: "update_room",
           data: getWaitingRooms(),
         },
-        sendToAll: false,
-      });
+        sendToAll: true,
+      };
+
+      queue.push(updatingRoomMessage);
+
+      const users = getUsersFromRoom(message.data.indexRoom);
+      const isCreatingGame = users.length === 2;
+
+      if (isCreatingGame) {
+        const idGame = createGame();
+
+        const gameCreationMessage: OutgoingQueueMessage = {
+          message: {
+            type: "create_game",
+            data: {
+              idGame,
+              idPlayer: wsId,
+            },
+          },
+          sendToAll: true,
+        };
+
+        queue.push(gameCreationMessage);
+      }
+
+      return queue;
+    }
+
+    case "add_ships": {
+      addUserToGame(wsId, message.data.gameId, message.data.ships);
+
+      const isStartingGame = checkIsStartingGame(message.data.gameId);
+
+      if (isStartingGame) {
+        const startGameMessage: OutgoingQueueMessage = {
+          message: {
+            type: "start_game",
+            data: { currentPlayerIndex: wsId, ships: message.data.ships },
+          },
+          sendToAll: true,
+        };
+
+        queue.push(startGameMessage);
+      }
 
       return queue;
     }

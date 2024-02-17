@@ -27,11 +27,11 @@ export const createWSServer = (port: number) => {
     ws.send(JSON.stringify({ message: "welcome" }));
   });
 
-  console.log(`WS Server has started on port ${port}!`);
-
   const sendToAll = (message: OutgoingMessage) => {
     wsServer.clients.forEach((client) => {
       client.send(stringify(message));
     });
   };
+
+  console.log(`WS Server has started on port ${port}!`);
 };

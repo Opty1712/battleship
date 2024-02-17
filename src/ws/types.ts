@@ -5,6 +5,16 @@ export interface FixedWebSocket extends WebSocket {
   id: number;
 }
 
+export type Ship = {
+  position: {
+    x: number;
+    y: number;
+  };
+  direction: boolean;
+  length: number;
+  type: "small" | "medium" | "large" | "huge";
+};
+
 type IncomingVariants = {
   reg: {
     type: "reg";
@@ -17,6 +27,15 @@ type IncomingVariants = {
   create_room: { type: "create_room"; data: "" };
 
   add_user_to_room: { type: "add_user_to_room"; data: { indexRoom: number } };
+
+  add_ships: {
+    type: "add_ships";
+    data: {
+      gameId: number;
+      ships: Array<Ship>;
+      indexPlayer: number;
+    };
+  };
 };
 
 export type IncomingMessage<
@@ -41,23 +60,27 @@ type OutgoingVariants = {
       roomUsers: Array<{ name: string; index: number }>;
     }>;
   };
+
+  create_game: {
+    type: "create_game";
+    data: {
+      idGame: number;
+      idPlayer: number;
+    };
+  };
+
+  start_game: {
+    type: "start_game";
+    data: { ships: Array<Ship>; currentPlayerIndex: number };
+  };
 };
 
 export type OutgoingMessage<
   K extends keyof OutgoingVariants = keyof OutgoingVariants
 > = OutgoingVariants[K];
-// type:
-//   | "reg"
-//   | "update_winners"
-//   | "create_game"
-//   | "update_room"
-//   | "start_game"
-//   | "attack"
-//   | "turn"
-//   | "finish";
-// data: {};
 
-export type OutgoingQueue = Array<{
+export type OutgoingQueueMessage = {
   message: OutgoingMessage;
   sendToAll: boolean;
-}>;
+};
+export type OutgoingQueue = Array<OutgoingQueueMessage>;
