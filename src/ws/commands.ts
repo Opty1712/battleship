@@ -10,22 +10,12 @@ import {
   getUserInGame,
   getUsersFromRoom,
   getWaitingRooms,
+  getWinners,
   initUserInGame,
   makeAttack,
 } from "./game";
 import { IncomingMessage, OutgoingQueue, OutgoingQueueMessage } from "./types";
 import { getRandomInRange, parseMessage } from "./utils";
-
-const outgoingCommands = {
-  reg: "s c",
-  update_winners: "c",
-  create_game: "c",
-  update_room: "c",
-  start_game: "c",
-  attack: "s c",
-  turn: "c",
-  finish: "c",
-};
 
 const command = (playerID: number, message: IncomingMessage) => {
   const queue: OutgoingQueue = [];
@@ -54,7 +44,14 @@ const command = (playerID: number, message: IncomingMessage) => {
         },
       };
 
-      queue.push(regMessage, updatingRoomMessage);
+      const winnersMessage: OutgoingQueueMessage = {
+        message: {
+          type: "update_winners",
+          data: getWinners(),
+        },
+      };
+
+      queue.push(regMessage, updatingRoomMessage, winnersMessage);
 
       return queue;
     }
@@ -166,58 +163,12 @@ const command = (playerID: number, message: IncomingMessage) => {
       return queue;
     }
 
-    case "attack": {
-      const { isGameFinished, status } = makeAttack({
-        ...message.data,
-        playerID,
-      });
-
-      const enemyId = getEnemyIdFromGame(message.data.gameId, playerID);
-
-      const attackStatusMessage: OutgoingQueueMessage = {
-        message: {
-          type: "attack",
-          data: {
-            currentPlayer: playerID,
-            status,
-            position: { x: message.data.x, y: message.data.y },
-          },
-        },
-        sendToPlayers: [playerID, enemyId],
-      };
-
-      queue.push(attackStatusMessage);
-
-      const nextPlayer = status === "miss" ? enemyId : playerID;
-
-      if (isGameFinished) {
-        const finishMessage: OutgoingQueueMessage = {
-          message: {
-            type: "finish",
-            data: { winPlayer: playerID },
-          },
-          sendToPlayers: [enemyId, playerID],
-        };
-
-        queue.push(finishMessage);
-      } else {
-        const turnMessage: OutgoingQueueMessage = {
-          message: {
-            type: "turn",
-            data: { currentPlayer: nextPlayer },
-          },
-          sendToPlayers: [enemyId, playerID],
-        };
-
-        queue.push(turnMessage);
-      }
-
-      return queue;
-    }
-
+    case "attack":
     case "randomAttack": {
-      const x = getRandomInRange(0, 9);
-      const y = getRandomInRange(0, 9);
+      const x =
+        message.type === "attack" ? message.data.x : getRandomInRange(0, 9);
+      const y =
+        message.type === "attack" ? message.data.y : getRandomInRange(0, 9);
 
       const { isGameFinished, status } = makeAttack({
         gameId: message.data.gameId,
@@ -253,7 +204,14 @@ const command = (playerID: number, message: IncomingMessage) => {
           sendToPlayers: [enemyId, playerID],
         };
 
-        queue.push(finishMessage);
+        const winnersMessage: OutgoingQueueMessage = {
+          message: {
+            type: "update_winners",
+            data: getWinners(),
+          },
+        };
+
+        queue.push(finishMessage, winnersMessage);
       } else {
         const turnMessage: OutgoingQueueMessage = {
           message: {

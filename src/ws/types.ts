@@ -109,6 +109,16 @@ type OutgoingVariants = {
       winPlayer: number;
     };
   };
+
+  update_winners: {
+    type: "update_winners";
+    data: Array<Winner>;
+  };
+};
+
+export type Winner = {
+  name: string;
+  wins: number;
 };
 
 export type OutgoingMessage<

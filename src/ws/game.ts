@@ -1,9 +1,9 @@
-import { IncomingVariants, Ship, ShotStatus } from "./types";
+import { IncomingVariants, Ship, ShotStatus, Winner } from "./types";
 
 let roomsCounter = 0;
 let gamesCounter = 0;
 
-const wins = {};
+const winners = new Map<number, number>();
 const users = new Map<number, string>();
 const rooms = new Map<number, Array<number>>();
 
@@ -94,6 +94,7 @@ export const initUserInGame = (
 ) => {
   const { shipMatrix, shipsById } = getShipsData(ships);
   addUserToGame(playerID, gameId, shipMatrix, shipsById);
+  winners.set(playerID, 0);
 };
 
 export const checkIsStartingGame = (gameId: number) => {
@@ -170,7 +171,7 @@ export const makeAttack = ({
     enemyData.shipsById[shipId]
   );
 
-  const isGameFinished = updateGameProgress(selfData, status);
+  const isGameFinished = updateGameProgress(selfData, status, playerID);
 
   return { status, isGameFinished };
 };
@@ -198,16 +199,33 @@ const getShipStatus = (
   return "killed";
 };
 
-const updateGameProgress = (game: Game, status: ShotStatus) => {
+const updateGameProgress = (
+  game: Game,
+  status: ShotStatus,
+  playerID: number
+) => {
   const totalShips = 10;
 
   if (status === "killed") {
     game.killed++;
   }
 
-  return game.killed === totalShips;
+  const isGameFinished = game.killed === totalShips;
+
+  if (isGameFinished) {
+    const data = winners.get(playerID);
+    winners.set(playerID, data + 1);
+  }
+
+  return isGameFinished;
 };
 
 export const getWinners = () => {
-  return Object.values(wins);
+  const winnersArray: Array<Winner> = Array.from(winners).map(
+    ([playerId, wins]) => {
+      return { name: users.get(playerId), wins };
+    }
+  );
+
+  return winnersArray;
 };
