@@ -1,13 +1,18 @@
 import {
   addUser,
-  addUserToGame,
   addUserToRoom,
   checkIsStartingGame,
   createGame,
   createRoom,
+  deleteRoom,
+  getEnemyIdFromGame,
+  getEnemyIdFromRoom,
+  getUserInGame,
   getUsersFromRoom,
   getWaitingRooms,
-} from "./gameActions";
+  initUserInGame,
+  makeAttack,
+} from "./game";
 import { IncomingMessage, OutgoingQueue, OutgoingQueueMessage } from "./types";
 import { parseMessage } from "./utils";
 
@@ -22,12 +27,13 @@ const outgoingCommands = {
   finish: "c",
 };
 
-const command = (wsId: number, message: IncomingMessage) => {
+const command = (playerID: number, message: IncomingMessage) => {
   const queue: OutgoingQueue = [];
 
   switch (message.type) {
     case "reg": {
-      const player = addUser(wsId, message.data.name);
+      const player = addUser(playerID, message.data.name);
+
       const regMessage: OutgoingQueueMessage = {
         message: {
           type: "reg",
@@ -38,7 +44,7 @@ const command = (wsId: number, message: IncomingMessage) => {
             errorText: "",
           },
         },
-        sendToAll: false,
+        sendToPlayers: [playerID],
       };
 
       const updatingRoomMessage: OutgoingQueueMessage = {
@@ -46,7 +52,6 @@ const command = (wsId: number, message: IncomingMessage) => {
           type: "update_room",
           data: getWaitingRooms(),
         },
-        sendToAll: false,
       };
 
       queue.push(regMessage, updatingRoomMessage);
@@ -55,14 +60,13 @@ const command = (wsId: number, message: IncomingMessage) => {
     }
 
     case "create_room": {
-      const roomId = createRoom();
+      createRoom();
 
       const updatingRoomMessage: OutgoingQueueMessage = {
         message: {
           type: "update_room",
-          data: [{ roomId, roomUsers: [] }],
+          data: getWaitingRooms(),
         },
-        sendToAll: true,
       };
 
       queue.push(updatingRoomMessage);
@@ -71,14 +75,13 @@ const command = (wsId: number, message: IncomingMessage) => {
     }
 
     case "add_user_to_room": {
-      addUserToRoom(wsId, message.data.indexRoom);
+      addUserToRoom(playerID, message.data.indexRoom);
 
       const updatingRoomMessage: OutgoingQueueMessage = {
         message: {
           type: "update_room",
           data: getWaitingRooms(),
         },
-        sendToAll: true,
       };
 
       queue.push(updatingRoomMessage);
@@ -88,53 +91,92 @@ const command = (wsId: number, message: IncomingMessage) => {
 
       if (isCreatingGame) {
         const idGame = createGame();
+        const enemyId = getEnemyIdFromRoom(message.data.indexRoom, playerID);
+        deleteRoom(message.data.indexRoom);
 
-        const gameCreationMessage: OutgoingQueueMessage = {
+        const gameCreationUser1Message: OutgoingQueueMessage = {
           message: {
             type: "create_game",
             data: {
               idGame,
-              idPlayer: wsId,
+              idPlayer: playerID,
             },
           },
-          sendToAll: true,
+          sendToPlayers: [playerID],
         };
 
-        queue.push(gameCreationMessage);
+        const gameCreationUser2Message: OutgoingQueueMessage = {
+          message: {
+            type: "create_game",
+            data: {
+              idGame,
+              idPlayer: enemyId,
+            },
+          },
+          sendToPlayers: [enemyId],
+        };
+
+        queue.push(gameCreationUser1Message, gameCreationUser2Message);
       }
 
       return queue;
     }
 
     case "add_ships": {
-      addUserToGame(wsId, message.data.gameId, message.data.ships);
-
+      initUserInGame(playerID, message.data.gameId, message.data.ships);
       const isStartingGame = checkIsStartingGame(message.data.gameId);
 
       if (isStartingGame) {
-        const startGameMessage: OutgoingQueueMessage = {
+        const users = getUserInGame(message.data.gameId);
+
+        const startUser1Message: OutgoingQueueMessage = {
           message: {
             type: "start_game",
-            data: { currentPlayerIndex: wsId, ships: message.data.ships },
+            data: { currentPlayerIndex: playerID, ships: message.data.ships },
           },
-          sendToAll: true,
+          sendToPlayers: [playerID],
         };
 
-        queue.push(startGameMessage);
+        const enemyId = getEnemyIdFromGame(message.data.gameId, playerID);
+
+        const startUser2Message: OutgoingQueueMessage = {
+          message: {
+            type: "start_game",
+            data: {
+              currentPlayerIndex: enemyId,
+              ships: message.data.ships,
+            },
+          },
+          sendToPlayers: [enemyId],
+        };
+
+        const startingUser = Math.random() > 0.5 ? users[0] : users[1];
+
+        const turnMessage: OutgoingQueueMessage = {
+          message: {
+            type: "turn",
+            data: { currentPlayer: startingUser },
+          },
+          sendToPlayers: [enemyId, playerID],
+        };
+
+        queue.push(startUser1Message, startUser2Message, turnMessage);
       }
 
       return queue;
     }
-  }
 
-  // add_user_to_room: "s",
-  // add_ships: "s",
-  // attack: "s c",
-  // randomAttack: "s",
+    case "attack": {
+      makeAttack({ ...message.data, playerID });
+      return queue;
+    }
+  }
 };
 
 export const reactOnMessage = (wsId: number, received: string) => {
   const message = parseMessage(received);
+
+  console.log(1111, message);
 
   try {
     if (message) {

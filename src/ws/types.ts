@@ -15,7 +15,7 @@ export type Ship = {
   type: "small" | "medium" | "large" | "huge";
 };
 
-type IncomingVariants = {
+export type IncomingVariants = {
   reg: {
     type: "reg";
     data: {
@@ -35,6 +35,16 @@ type IncomingVariants = {
       ships: Array<Ship>;
       indexPlayer: number;
     };
+  };
+
+  attack: {
+    type: "attack";
+    data: { x: number; y: number; gameId: number; indexPlayer: number };
+  };
+
+  randomAttack: {
+    type: "randomAttack";
+    data: { gameId: number; indexPlayer: number };
   };
 };
 
@@ -73,6 +83,13 @@ type OutgoingVariants = {
     type: "start_game";
     data: { ships: Array<Ship>; currentPlayerIndex: number };
   };
+
+  turn: {
+    type: "turn";
+    data: {
+      currentPlayer: number;
+    };
+  };
 };
 
 export type OutgoingMessage<
@@ -81,6 +98,6 @@ export type OutgoingMessage<
 
 export type OutgoingQueueMessage = {
   message: OutgoingMessage;
-  sendToAll: boolean;
+  sendToPlayers?: Array<number>;
 };
 export type OutgoingQueue = Array<OutgoingQueueMessage>;
