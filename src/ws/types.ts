@@ -90,6 +90,18 @@ type OutgoingVariants = {
       currentPlayer: number;
     };
   };
+
+  attack: {
+    type: "attack";
+    data: {
+      position: {
+        x: number;
+        y: number;
+      };
+      currentPlayer: number;
+      status: ShotStatus;
+    };
+  };
 };
 
 export type OutgoingMessage<
@@ -101,3 +113,5 @@ export type OutgoingQueueMessage = {
   sendToPlayers?: Array<number>;
 };
 export type OutgoingQueue = Array<OutgoingQueueMessage>;
+
+export type ShotStatus = "miss" | "killed" | "shot";

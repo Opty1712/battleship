@@ -167,7 +167,33 @@ const command = (playerID: number, message: IncomingMessage) => {
     }
 
     case "attack": {
-      makeAttack({ ...message.data, playerID });
+      const status = makeAttack({ ...message.data, playerID });
+      const enemyId = getEnemyIdFromGame(message.data.gameId, playerID);
+
+      const attackStatusMessage: OutgoingQueueMessage = {
+        message: {
+          type: "attack",
+          data: {
+            currentPlayer: playerID,
+            status,
+            position: { x: message.data.x, y: message.data.y },
+          },
+        },
+        sendToPlayers: [playerID, enemyId],
+      };
+
+      const nextPlayer = status === "miss" ? enemyId : playerID;
+
+      const turnMessage: OutgoingQueueMessage = {
+        message: {
+          type: "turn",
+          data: { currentPlayer: nextPlayer },
+        },
+        sendToPlayers: [enemyId, playerID],
+      };
+
+      queue.push(attackStatusMessage, turnMessage);
+
       return queue;
     }
   }
