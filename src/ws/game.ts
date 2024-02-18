@@ -10,11 +10,14 @@ const rooms = new Map<number, Array<number>>();
 type ShipMatrix = Array<Array<number>>;
 type ShipsById = Record<number, Ship>;
 type Shots = Array<Array<1 | 0>>;
+type Game = {
+  shipMatrix: ShipMatrix;
+  shipsById: ShipsById;
+  shots: Shots;
+  killed: number;
+};
 
-const games = new Map<
-  number,
-  Map<number, { shipMatrix: ShipMatrix; shipsById: ShipsById; shots: Shots }>
->();
+const games = new Map<number, Map<number, Game>>();
 
 export const addUser = (playerID: number, name: string) => {
   users.set(playerID, name);
@@ -73,7 +76,14 @@ const addUserToGame = (
   shipsById: ShipsById
 ) => {
   const data = games.get(gameId);
-  data.set(playerID, { shipMatrix, shipsById, shots: createShotsMatrix() });
+
+  data.set(playerID, {
+    shipMatrix,
+    shipsById,
+    shots: createShotsMatrix(),
+    killed: 0,
+  });
+
   games.set(gameId, data);
 };
 
@@ -82,7 +92,7 @@ export const initUserInGame = (
   gameId: number,
   ships: Array<Ship>
 ) => {
-  const { shipMatrix, shipsById } = createShipsMatrix(ships);
+  const { shipMatrix, shipsById } = getShipsData(ships);
   addUserToGame(playerID, gameId, shipMatrix, shipsById);
 };
 
@@ -120,7 +130,7 @@ const createShotsMatrix = () => {
   return [...new Array(10)].map(() => [...new Array(10)].fill(0));
 };
 
-const createShipsMatrix = (ships: Array<Ship>) => {
+const getShipsData = (ships: Array<Ship>) => {
   const shipMatrix = createShotsMatrix();
   const shipsById: Record<number, Ship> = {};
 
@@ -140,7 +150,12 @@ const createShipsMatrix = (ships: Array<Ship>) => {
   return { shipMatrix, shipsById };
 };
 
-export const makeAttack = ({ gameId, playerID, x, y }: Attack): ShotStatus => {
+export const makeAttack = ({
+  gameId,
+  playerID,
+  x,
+  y,
+}: Attack): { status: ShotStatus; isGameFinished: boolean } => {
   const gameData = games.get(gameId);
   const selfData = gameData.get(playerID);
   selfData.shots[x][y] = 1;
@@ -148,13 +163,16 @@ export const makeAttack = ({ gameId, playerID, x, y }: Attack): ShotStatus => {
   const enemyId = getEnemyIdFromGame(gameId, playerID);
   const enemyData = gameData.get(enemyId);
   const shipId = enemyData.shipMatrix[x][y];
+
   const status = getShipStatus(
     shipId,
     selfData.shots,
     enemyData.shipsById[shipId]
   );
 
-  return status;
+  const isGameFinished = updateGameProgress(selfData, status);
+
+  return { status, isGameFinished };
 };
 
 const getShipStatus = (
@@ -178,6 +196,16 @@ const getShipStatus = (
   }
 
   return "killed";
+};
+
+const updateGameProgress = (game: Game, status: ShotStatus) => {
+  const totalShips = 10;
+
+  if (status === "killed") {
+    game.killed++;
+  }
+
+  return game.killed === totalShips;
 };
 
 export const getWinners = () => {

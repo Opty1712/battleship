@@ -167,7 +167,10 @@ const command = (playerID: number, message: IncomingMessage) => {
     }
 
     case "attack": {
-      const status = makeAttack({ ...message.data, playerID });
+      const { isGameFinished, status } = makeAttack({
+        ...message.data,
+        playerID,
+      });
       const enemyId = getEnemyIdFromGame(message.data.gameId, playerID);
 
       const attackStatusMessage: OutgoingQueueMessage = {
@@ -182,17 +185,31 @@ const command = (playerID: number, message: IncomingMessage) => {
         sendToPlayers: [playerID, enemyId],
       };
 
+      queue.push(attackStatusMessage);
+
       const nextPlayer = status === "miss" ? enemyId : playerID;
 
-      const turnMessage: OutgoingQueueMessage = {
-        message: {
-          type: "turn",
-          data: { currentPlayer: nextPlayer },
-        },
-        sendToPlayers: [enemyId, playerID],
-      };
+      if (isGameFinished) {
+        const finishMessage: OutgoingQueueMessage = {
+          message: {
+            type: "finish",
+            data: { winPlayer: playerID },
+          },
+          sendToPlayers: [enemyId, playerID],
+        };
 
-      queue.push(attackStatusMessage, turnMessage);
+        queue.push(finishMessage);
+      } else {
+        const turnMessage: OutgoingQueueMessage = {
+          message: {
+            type: "turn",
+            data: { currentPlayer: nextPlayer },
+          },
+          sendToPlayers: [enemyId, playerID],
+        };
+
+        queue.push(turnMessage);
+      }
 
       return queue;
     }

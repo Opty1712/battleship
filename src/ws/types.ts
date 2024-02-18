@@ -102,6 +102,13 @@ type OutgoingVariants = {
       status: ShotStatus;
     };
   };
+
+  finish: {
+    type: "finish";
+    data: {
+      winPlayer: number;
+    };
+  };
 };
 
 export type OutgoingMessage<
