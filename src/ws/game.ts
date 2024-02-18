@@ -1,12 +1,6 @@
 import { IncomingVariants, Ship, ShotStatus, Winner } from "./types";
 
-let roomsCounter = 0;
-let gamesCounter = 0;
-
-const winners = new Map<number, number>();
-const users = new Map<number, string>();
-const rooms = new Map<number, Array<number>>();
-
+type User = { name: string; password: string };
 type ShipMatrix = Array<Array<number>>;
 type ShipsById = Record<number, Ship>;
 type Shots = Array<Array<1 | 0>>;
@@ -17,12 +11,49 @@ type Game = {
   killed: number;
 };
 
+let roomsCounter = 0;
+let gamesCounter = 0;
+
+const winners = new Map<number, number>();
+const users = new Map<number, User>();
+const rooms = new Map<number, Array<number>>();
+
 const games = new Map<number, Map<number, Game>>();
 
-export const addUser = (playerID: number, name: string) => {
-  users.set(playerID, name);
+export const addUser = (playerID: number, name: string, password: string) => {
+  const user = checkIsUserExists(name, password);
 
-  return playerID;
+  if (user === null) {
+    users.set(playerID, { name, password });
+  }
+
+  return user || playerID;
+};
+
+const checkIsUserExists = (name: string, password: string) => {
+  const usersArray = Array.from(users);
+  let nameMatched = "";
+  let foundUserId: null | number = null;
+
+  usersArray.forEach(([playerId, user]) => {
+    if (user.name === name) {
+      nameMatched = name;
+    }
+
+    if (user.name === name && user.password === password) {
+      foundUserId = playerId;
+    }
+  });
+
+  if (typeof foundUserId === "number") {
+    return foundUserId;
+  }
+
+  if (nameMatched) {
+    return "incorrectPassword";
+  }
+
+  return null;
 };
 
 export const getPlayer = (playerID: number) => {
@@ -56,7 +87,7 @@ export const getWaitingRooms = () => {
   return waitingRooms.map(([roomId, roomUsers]) => ({
     roomId,
     roomUsers: roomUsers.map((userId) => ({
-      name: getPlayer(userId),
+      name: getPlayer(userId).name,
       index: userId,
     })),
   }));
@@ -223,7 +254,7 @@ const updateGameProgress = (
 export const getWinners = () => {
   const winnersArray: Array<Winner> = Array.from(winners).map(
     ([playerId, wins]) => {
-      return { name: users.get(playerId), wins };
+      return { name: users.get(playerId).name, wins };
     }
   );
 

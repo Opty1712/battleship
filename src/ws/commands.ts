@@ -22,38 +22,44 @@ const command = (playerID: number, message: IncomingMessage) => {
 
   switch (message.type) {
     case "reg": {
-      const player = addUser(playerID, message.data.name);
+      const player = addUser(
+        playerID,
+        message.data.name,
+        message.data.password
+      );
 
-      const regMessage: OutgoingQueueMessage = {
-        message: {
-          type: "reg",
-          data: {
-            name: message.data.name,
-            index: player,
-            error: false,
-            errorText: "",
+      if (typeof player === "number") {
+        const regMessage: OutgoingQueueMessage = {
+          message: {
+            type: "reg",
+            data: {
+              name: message.data.name,
+              index: player,
+              error: false,
+              errorText: "",
+            },
           },
-        },
-        sendToPlayers: [playerID],
-      };
+          sendToPlayers: [playerID],
+        };
 
-      const updatingRoomMessage: OutgoingQueueMessage = {
-        message: {
-          type: "update_room",
-          data: getWaitingRooms(),
-        },
-      };
+        const updatingRoomMessage: OutgoingQueueMessage = {
+          message: {
+            type: "update_room",
+            data: getWaitingRooms(),
+          },
+        };
 
-      const winnersMessage: OutgoingQueueMessage = {
-        message: {
-          type: "update_winners",
-          data: getWinners(),
-        },
-      };
+        const winnersMessage: OutgoingQueueMessage = {
+          message: {
+            type: "update_winners",
+            data: getWinners(),
+          },
+        };
 
-      queue.push(regMessage, updatingRoomMessage, winnersMessage);
+        queue.push(regMessage, updatingRoomMessage, winnersMessage);
 
-      return queue;
+        return queue;
+      }
     }
 
     case "create_room": {
