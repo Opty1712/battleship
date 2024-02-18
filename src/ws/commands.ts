@@ -14,7 +14,7 @@ import {
   makeAttack,
 } from "./game";
 import { IncomingMessage, OutgoingQueue, OutgoingQueueMessage } from "./types";
-import { parseMessage } from "./utils";
+import { getRandomInRange, parseMessage } from "./utils";
 
 const outgoingCommands = {
   reg: "s c",
@@ -171,6 +171,7 @@ const command = (playerID: number, message: IncomingMessage) => {
         ...message.data,
         playerID,
       });
+
       const enemyId = getEnemyIdFromGame(message.data.gameId, playerID);
 
       const attackStatusMessage: OutgoingQueueMessage = {
@@ -213,13 +214,65 @@ const command = (playerID: number, message: IncomingMessage) => {
 
       return queue;
     }
+
+    case "randomAttack": {
+      const x = getRandomInRange(0, 9);
+      const y = getRandomInRange(0, 9);
+
+      const { isGameFinished, status } = makeAttack({
+        gameId: message.data.gameId,
+        x,
+        y,
+        playerID,
+      });
+
+      const enemyId = getEnemyIdFromGame(message.data.gameId, playerID);
+
+      const attackStatusMessage: OutgoingQueueMessage = {
+        message: {
+          type: "attack",
+          data: {
+            currentPlayer: playerID,
+            status,
+            position: { x, y },
+          },
+        },
+        sendToPlayers: [playerID, enemyId],
+      };
+
+      queue.push(attackStatusMessage);
+
+      const nextPlayer = status === "miss" ? enemyId : playerID;
+
+      if (isGameFinished) {
+        const finishMessage: OutgoingQueueMessage = {
+          message: {
+            type: "finish",
+            data: { winPlayer: playerID },
+          },
+          sendToPlayers: [enemyId, playerID],
+        };
+
+        queue.push(finishMessage);
+      } else {
+        const turnMessage: OutgoingQueueMessage = {
+          message: {
+            type: "turn",
+            data: { currentPlayer: nextPlayer },
+          },
+          sendToPlayers: [enemyId, playerID],
+        };
+
+        queue.push(turnMessage);
+      }
+
+      return queue;
+    }
   }
 };
 
 export const reactOnMessage = (wsId: number, received: string) => {
   const message = parseMessage(received);
-
-  console.log(1111, message);
 
   try {
     if (message) {
@@ -227,7 +280,8 @@ export const reactOnMessage = (wsId: number, received: string) => {
     } else {
       console.error(`No command found in ${received}`);
     }
-  } catch {
-    console.error(`Can't parse command ${received}`);
+  } catch (e) {
+    console.log(`Running command failed: ${received}`);
+    console.error(e);
   }
 };

@@ -26,3 +26,7 @@ export const stringify = (value: OutgoingMessage) => {
     console.error(`Can't stringify ${value}`);
   }
 };
+
+export const getRandomInRange = (min: number, max: number) => {
+  return Math.round(Math.random() * (max - min) + min);
+};
