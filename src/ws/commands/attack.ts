@@ -91,6 +91,5 @@ export const handleAttack = (
     handlePlayerAttack(message.data.x, message.data.y, playerID);
   }
 
-  console.log(queue);
   return queue;
 };
