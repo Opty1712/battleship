@@ -35,13 +35,13 @@ const checkIsUserExists = (name: string, password: string) => {
   let nameMatched = "";
   let foundUserId: null | number = null;
 
-  usersArray.forEach(([playerId, user]) => {
+  usersArray.forEach(([playerID, user]) => {
     if (user.name === name) {
       nameMatched = name;
     }
 
     if (user.name === name && user.password === password) {
-      foundUserId = playerId;
+      foundUserId = playerID;
     }
   });
 
@@ -125,7 +125,11 @@ export const initUserInGame = (
 ) => {
   const { shipMatrix, shipsById } = getShipsData(ships);
   addUserToGame(playerID, gameId, shipMatrix, shipsById);
-  winners.set(playerID, 0);
+  const isPlayerExistsInWinners = winners.get(playerID);
+
+  if (!isPlayerExistsInWinners) {
+    winners.set(playerID, 0);
+  }
 };
 
 export const checkIsStartingGame = (gameId: number) => {
@@ -252,11 +256,39 @@ const updateGameProgress = (
 };
 
 export const getWinners = () => {
-  const winnersArray: Array<Winner> = Array.from(winners).map(
-    ([playerId, wins]) => {
-      return { name: users.get(playerId).name, wins };
-    }
-  );
+  const winnersArray: Array<Winner> = Array.from(winners)
+    .sort(([, winsA], [, winsB]) => (winsA > winsB ? -1 : 1))
+    .map(([playerID, wins]) => {
+      return { name: users.get(playerID).name, wins };
+    });
 
   return winnersArray;
 };
+
+export const botPlayerId = 0;
+const botName = "Bot";
+users.set(botPlayerId, { name: botName, password: "" });
+
+export const createGameWithBot = (playerID: number) => {
+  const roomId = createRoom();
+  addUserToRoom(botPlayerId, roomId);
+  addUserToRoom(playerID, roomId);
+
+  const idGame = createGame();
+  // initUserInGame(botPlayerId, idGame, botShips);
+
+  return idGame;
+};
+
+export const botShips: Array<Ship> = [
+  { position: { x: 3, y: 1 }, direction: false, type: "huge", length: 4 },
+  { position: { x: 5, y: 5 }, direction: true, type: "large", length: 3 },
+  { position: { x: 0, y: 5 }, direction: false, type: "large", length: 3 },
+  { position: { x: 0, y: 0 }, direction: true, type: "medium", length: 2 },
+  { position: { x: 4, y: 9 }, direction: false, type: "medium", length: 2 },
+  { position: { x: 0, y: 8 }, direction: false, type: "medium", length: 2 },
+  { position: { x: 6, y: 3 }, direction: true, type: "small", length: 1 },
+  { position: { x: 1, y: 3 }, direction: true, type: "small", length: 1 },
+  { position: { x: 8, y: 2 }, direction: false, type: "small", length: 1 },
+  { position: { x: 8, y: 6 }, direction: false, type: "small", length: 1 },
+];

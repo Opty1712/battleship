@@ -6,8 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "ts-node ./index.ts",
-    "start:dev": "nodemon ./index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start:dev": "nodemon ./index.ts"
   },
   "author": "Opty1712",
   "keywords": [],

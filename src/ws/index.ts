@@ -1,5 +1,5 @@
 import { WebSocketServer } from "ws";
-import { reactOnMessage } from "./commands";
+import { handleCommand } from "./commands";
 import { FixedWebSocket, OutgoingMessage } from "./types";
 import { stringify } from "./utils";
 
@@ -13,7 +13,7 @@ export const createWSServer = (port: number) => {
     ws.on("error", console.error);
 
     ws.on("message", (data) => {
-      const queue = reactOnMessage(ws.id, data.toString()) || [];
+      const queue = handleCommand(ws.id, data.toString()) || [];
 
       queue.forEach((item) => {
         sendToAll(item.message, item.sendToPlayers);

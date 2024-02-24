@@ -46,6 +46,8 @@ export type IncomingVariants = {
     type: "randomAttack";
     data: { gameId: number; indexPlayer: number };
   };
+
+  single_play: { type: "single_play"; data: "" };
 };
 
 export type IncomingMessage<
