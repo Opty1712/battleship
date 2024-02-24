@@ -10,6 +10,7 @@ type Game = {
   shots: Shots;
   killed: number;
 };
+type Turns = Record<number, number>;
 
 let roomsCounter = 0;
 let gamesCounter = 0;
@@ -17,6 +18,7 @@ let gamesCounter = 0;
 const winners = new Map<number, number>();
 const users = new Map<number, User>();
 const rooms = new Map<number, Array<number>>();
+const turns: Turns = {};
 
 const games = new Map<number, Map<number, Game>>();
 
@@ -116,6 +118,14 @@ const addUserToGame = (
   });
 
   games.set(gameId, data);
+};
+
+export const getPlayerTurnInGame = (gameId: number) => {
+  return turns[gameId];
+};
+
+export const setPlayerTurnInGame = (playerID: number, gameId: number) => {
+  turns[gameId] = playerID;
 };
 
 export const initUserInGame = (

@@ -1,8 +1,10 @@
 import {
   botPlayerId,
   getEnemyIdFromGame,
+  getPlayerTurnInGame,
   getWinners,
   makeAttack,
+  setPlayerTurnInGame,
 } from "../game";
 import {
   IncomingVariants,
@@ -16,6 +18,12 @@ export const handleAttack = (
   message: IncomingVariants["attack"] | IncomingVariants["randomAttack"]
 ) => {
   const queue: OutgoingQueue = [];
+
+  const playerWithTurn = getPlayerTurnInGame(message.data.gameId);
+
+  if (playerWithTurn !== playerID) {
+    return queue;
+  }
 
   const handlePlayerAttack = (x: number, y: number, playerID: number) => {
     const { isGameFinished, status } = makeAttack({
@@ -42,6 +50,7 @@ export const handleAttack = (
     queue.push(attackStatusMessage);
 
     const nextPlayer = status === "miss" ? enemyId : playerID;
+    setPlayerTurnInGame(nextPlayer, message.data.gameId);
 
     if (isGameFinished) {
       const finishMessage: OutgoingQueueMessage = {

@@ -3,6 +3,7 @@ import {
   getEnemyIdFromGame,
   getUserInGame,
   initUserInGame,
+  setPlayerTurnInGame,
 } from "../game";
 import {
   IncomingVariants,
@@ -44,6 +45,7 @@ export const handleAddShips = (
     };
 
     const startingUser = Math.random() > 0.5 ? users[0] : users[1];
+    setPlayerTurnInGame(startingUser, message.data.gameId);
 
     const turnMessage: OutgoingQueueMessage = {
       message: {
