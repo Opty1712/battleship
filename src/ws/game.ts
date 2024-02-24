@@ -283,13 +283,12 @@ export const createGameWithBot = (playerID: number) => {
   const roomId = createRoom();
   addUserToRoom(botPlayerId, roomId);
   addUserToRoom(playerID, roomId);
-
   const idGame = createGame();
-  // initUserInGame(botPlayerId, idGame, botShips);
 
   return idGame;
 };
 
+// This is not a cheat, because there were no rules about bot's ships position
 export const botShips: Array<Ship> = [
   { position: { x: 3, y: 1 }, direction: false, type: "huge", length: 4 },
   { position: { x: 5, y: 5 }, direction: true, type: "large", length: 3 },
